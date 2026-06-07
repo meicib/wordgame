@@ -57,9 +57,24 @@ function getViableSubstrings(num: number) {
 }
 
 function generateJsonFile(
-  wordScores: Map<string, number>,
+  wordMap: Map<string, number>,
   viableSubstrings: Map<string, string[]>
 ) {
+  const totalWords = wordMap.size;
+  const firstThird = totalWords / 3;
+  const secondThird = (totalWords * 2) / 3;
+
+  const wordScores = new Map<string, number>();
+  for (const [word, rank] of wordMap) {
+    if (rank <= firstThird) {
+      wordScores.set(word, 1);
+    } else if (rank <= secondThird) {
+      wordScores.set(word, 2);
+    } else {
+      wordScores.set(word, 3);
+    }
+  }
+
   const data = {
     wordScores: Object.fromEntries(wordScores),
     substrings: Object.fromEntries(viableSubstrings),
