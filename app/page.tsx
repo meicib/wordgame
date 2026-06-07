@@ -44,12 +44,11 @@ export default function Home() {
     if (allWordsValid) {
       setScore(score + roundScore);
       setMessage(`Correct! You scored ${roundScore} points.`);
+      setInputs(["", "", ""]);
+      selectRandomSubstring();
     } else {
       setMessage("One or more words are not found in this word list.");
     }
-
-    setInputs(["", "", ""]);
-    selectRandomSubstring();
   };
 
   return (
