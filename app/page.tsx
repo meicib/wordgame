@@ -3,11 +3,15 @@
 import { useState, useEffect } from "react";
 import wordData from "./word-data.json";
 
+type GameState = "playing" | "round-over";
+
 export default function Home() {
   const [substring, setSubstring] = useState("");
   const [inputs, setInputs] = useState(["", "", ""]);
   const [score, setScore] = useState(0);
   const [message, setMessage] = useState("");
+  const [gameState, setGameState] = useState<GameState>("playing");
+  const [roundResults, setRoundResults] = useState<{ word: string; score: number }[]>([]);
 
   const viableSubstrings = Object.keys(wordData.substrings);
 
@@ -28,27 +32,36 @@ export default function Home() {
 
   const handleSubmit = () => {
     let roundScore = 0;
-    let allWordsValid = true;
+    const currentRoundResults: { word: string; score: number }[] = [];
+    const invalidWords: string[] = [];
 
     inputs.forEach((input) => {
       const validWordsForSubstring =
         wordData.substrings[substring as keyof typeof wordData.substrings];
       if (validWordsForSubstring && validWordsForSubstring.includes(input)) {
-        roundScore +=
-          wordData.wordScores[input as keyof typeof wordData.wordScores];
+        const wordScore = wordData.wordScores[input as keyof typeof wordData.wordScores];
+        roundScore += wordScore;
+        currentRoundResults.push({ word: input, score: wordScore });
       } else {
-        allWordsValid = false;
+        invalidWords.push(input);
       }
     });
 
-    if (allWordsValid) {
-      setScore(score + roundScore);
-      setMessage(`Correct! You scored ${roundScore} points.`);
-      setInputs(["", "", ""]);
-      selectRandomSubstring();
+    if (invalidWords.length > 0) {
+      setMessage(`Invalid word(s): ${invalidWords.join(", ")}. Please try again.`);
     } else {
-      setMessage("One or more words are not found in this word list.");
+      setScore(score + roundScore);
+      setRoundResults(currentRoundResults);
+      setGameState("round-over");
+      setMessage(`Correct! You scored ${roundScore} points this round.`);
     }
+  };
+
+  const handleNextRound = () => {
+    setInputs(["", "", ""]);
+    selectRandomSubstring();
+    setGameState("playing");
+    setMessage("");
   };
 
   return (
@@ -61,7 +74,7 @@ export default function Home() {
           Your score: {score}
         </p>
 
-        {substring && (
+        {gameState === "playing" && substring && (
           <div className="flex flex-col items-center gap-6 w-full">
             <p className="text-xl text-zinc-700 dark:text-zinc-300">
               Find three words containing the substring:
@@ -91,12 +104,32 @@ export default function Home() {
             >
               Submit
             </button>
-            {message && (
-              <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-                {message}
-              </p>
-            )}
           </div>
+        )}
+
+        {gameState === "round-over" && (
+          <div className="flex flex-col items-center gap-4 w-full text-center">
+            <h2 className="text-2xl font-semibold text-zinc-800 dark:text-zinc-100">Round Over!</h2>
+            <ul className="list-disc list-inside text-lg text-zinc-600 dark:text-zinc-300">
+              {roundResults.map((result, index) => (
+                <li key={index}>
+                  <span className="font-semibold">{result.word}</span>: {result.score} points
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={handleNextRound}
+              className="mt-4 h-12 w-full bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors"
+            >
+              Next Round
+            </button>
+          </div>
+        )}
+
+        {message && (
+          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400 text-center">
+            {message}
+          </p>
         )}
       </main>
     </div>
