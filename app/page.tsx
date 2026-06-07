@@ -12,6 +12,7 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [gameState, setGameState] = useState<GameState>("playing");
   const [roundResults, setRoundResults] = useState<{ word: string; score: number }[]>([]);
+  const [usedWords, setUsedWords] = useState<Set<string>>(new Set());
 
   const viableSubstrings = Object.keys(wordData.substrings);
 
@@ -34,26 +35,40 @@ export default function Home() {
     let roundScore = 0;
     const currentRoundResults: { word: string; score: number }[] = [];
     const invalidWords: string[] = [];
+    const alreadyUsedWords: string[] = [];
+
+    const uniqueInputs = new Set(inputs);
+    if (uniqueInputs.size !== inputs.length) {
+      setMessage("Please enter three different words.");
+      return;
+    }
 
     inputs.forEach((input) => {
-      const validWordsForSubstring =
-        wordData.substrings[substring as keyof typeof wordData.substrings];
-      if (validWordsForSubstring && validWordsForSubstring.includes(input)) {
-        const wordScore = wordData.wordScores[input as keyof typeof wordData.wordScores];
-        roundScore += wordScore;
-        currentRoundResults.push({ word: input, score: wordScore });
+      if (usedWords.has(input)) {
+        alreadyUsedWords.push(input);
       } else {
-        invalidWords.push(input);
+        const validWordsForSubstring =
+          wordData.substrings[substring as keyof typeof wordData.substrings];
+        if (validWordsForSubstring && validWordsForSubstring.includes(input)) {
+          const wordScore = wordData.wordScores[input as keyof typeof wordData.wordScores];
+          roundScore += wordScore;
+          currentRoundResults.push({ word: input, score: wordScore });
+        } else {
+          invalidWords.push(input);
+        }
       }
     });
 
-    if (invalidWords.length > 0) {
+    if (alreadyUsedWords.length > 0) {
+      setMessage(`Already used: ${alreadyUsedWords.join(", ")}. Try new words.`);
+    } else if (invalidWords.length > 0) {
       setMessage(`Invalid word(s): ${invalidWords.join(", ")}. Please try again.`);
     } else {
       setScore(score + roundScore);
       setRoundResults(currentRoundResults);
       setGameState("round-over");
       setMessage(`Correct! You scored ${roundScore} points this round.`);
+      setUsedWords(new Set([...usedWords, ...inputs]));
     }
   };
 
