@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import wordData from "./word-data.json";
 
-type GameState = "playing" | "round-over";
+type GameState = "playing" | "round-over" | "game-over";
 type Difficulty = "easy" | "medium" | "hard";
+
+const ROUND_TIME = 30;
 
 export default function Home() {
   const [substring, setSubstring] = useState("");
@@ -15,12 +17,48 @@ export default function Home() {
   const [roundResults, setRoundResults] = useState<{ word: string; score: number }[]>([]);
   const [usedWords, setUsedWords] = useState<Set<string>>(new Set());
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
+  const [timeLeft, setTimeLeft] = useState(ROUND_TIME);
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const selectRandomSubstring = (currentDifficulty: Difficulty) => {
     const viableSubstrings = Object.keys(wordData.substrings[currentDifficulty]);
     const randomIndex = Math.floor(Math.random() * viableSubstrings.length);
     setSubstring(viableSubstrings[randomIndex]);
   };
+
+  const resetTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    setTimeLeft(ROUND_TIME);
+  };
+
+  useEffect(() => {
+    if (gameState === "playing") {
+      resetTimer();
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prevTime) => {
+          if (prevTime <= 1) {
+            clearInterval(timerRef.current!);
+            setGameState("game-over");
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [gameState]);
 
   useEffect(() => {
     selectRandomSubstring(difficulty);
@@ -36,7 +74,16 @@ export default function Home() {
     setDifficulty(newDifficulty);
     setInputs(["", "", ""]);
     setMessage("");
+    setScore(0);
+    setUsedWords(new Set());
     setGameState("playing");
+    resetTimer();
+  };
+
+  const handlePlayAgain = () => {
+    setScore(0);
+    setUsedWords(new Set());
+    handleNextRound();
   };
 
   const handleSubmit = () => {
@@ -52,7 +99,7 @@ export default function Home() {
     }
 
     inputs.forEach((input) => {
-      if (input === "") return; // Ignore empty inputs for now
+      if (input === "") return;
 
       if (usedWords.has(input)) {
         alreadyUsedWords.push(input);
@@ -118,6 +165,9 @@ export default function Home() {
 
         {gameState === "playing" && substring && (
           <div className="flex flex-col items-center gap-6 w-full">
+            <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
+              Time: {timeLeft}
+            </div>
             <p className="text-xl text-zinc-700 dark:text-zinc-300">
               Find three words containing the substring:
             </p>
@@ -164,6 +214,19 @@ export default function Home() {
               className="mt-4 h-12 w-full bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors"
             >
               Next Round
+            </button>
+          </div>
+        )}
+
+        {gameState === "game-over" && (
+          <div className="flex flex-col items-center gap-4 w-full text-center">
+            <h2 className="text-3xl font-bold text-red-600 dark:text-red-500">Time's up!</h2>
+            <p className="text-xl text-zinc-800 dark:text-zinc-200">Your final score is {score}.</p>
+            <button
+              onClick={handlePlayAgain}
+              className="mt-4 h-12 w-full bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Play Again
             </button>
           </div>
         )}
