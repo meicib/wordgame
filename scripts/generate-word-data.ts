@@ -56,9 +56,33 @@ function getViableSubstrings(num: number) {
   return viableSubstringMap;
 }
 
+function categorizeSubstrings(viableSubstrings: Map<string, string[]>) {
+  const sortedSubstrings = [...viableSubstrings.entries()].sort(
+    (a, b) => b[1].length - a[1].length
+  );
+
+  const total = sortedSubstrings.length;
+  const easyCutoff = Math.floor(total / 3);
+  const mediumCutoff = Math.floor((total * 2) / 3);
+
+  const easy = sortedSubstrings.slice(0, easyCutoff);
+  const medium = sortedSubstrings.slice(easyCutoff, mediumCutoff);
+  const hard = sortedSubstrings.slice(mediumCutoff);
+
+  return {
+    easy: Object.fromEntries(easy),
+    medium: Object.fromEntries(medium),
+    hard: Object.fromEntries(hard),
+  };
+}
+
 function generateJsonFile(
   wordMap: Map<string, number>,
-  viableSubstrings: Map<string, string[]>
+  categorizedSubstrings: {
+    easy: { [s: string]: string[] };
+    medium: { [s: string]: string[] };
+    hard: { [s:string]: string[] };
+  }
 ) {
   const totalWords = wordMap.size;
   const firstThird = totalWords / 3;
@@ -77,7 +101,7 @@ function generateJsonFile(
 
   const data = {
     wordScores: Object.fromEntries(wordScores),
-    substrings: Object.fromEntries(viableSubstrings),
+    substrings: categorizedSubstrings,
   };
 
   fs.writeFileSync(outputFilePath, JSON.stringify(data, null, 2));
@@ -87,7 +111,8 @@ async function main() {
   await processWordsByLine(filePath);
   findAllSubstrings(3, wordMap);
   const viableSubstrings = getViableSubstrings(3);
-  generateJsonFile(wordMap, viableSubstrings);
+  const categorizedSubstrings = categorizeSubstrings(viableSubstrings);
+  generateJsonFile(wordMap, categorizedSubstrings);
 }
 
 main();
